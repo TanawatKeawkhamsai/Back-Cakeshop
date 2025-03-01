@@ -498,7 +498,55 @@ app.delete("/Order_detail/:id", (req, res) => {
         res.status(500).send(err);
       });
 });
+//---------------------------connect Front---------------------------------
 
+// Register
+app.get("/register", (req, res) => {
+  Customer.findAll() //select * from
+    .then((Register) => {
+      res.json(Register);
+    })
+    .catch((err) => {
+      res.status(500).send(err);
+    });
+});
+
+app.post("/register", async (req, res) => {
+  console.log(req.body);
+  Customer.create(req.body)
+    .then((Customer) => {
+      res.send(Customer);
+    })
+    .catch((err) => {
+      res.status(500).send(err);
+    });
+});
+
+//login
+app.post("/login", async (req, res) => {
+  try {
+    const { customer_username, customer_password } = req.body;
+    const customer = await Customer.findOne({ where: { customer_username } });
+    if (!customer) return res.json({ message: "User_not_found" });
+    else if (customer.password != customer_password)
+      return res.json({ message: "Wrong_Password" });
+    return res.status(200).json({ message: true, customer: customer });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Server_error" });
+  }
+});
+
+//menu_customer
+app.get("/menu_customer", (req, res) => {
+  Cake.findAll() //select * from
+    .then((menu_customer) => {
+      res.json(menu_customer);
+    })
+    .catch((err) => {
+      res.status(500).send(err);
+    });
+});
 
 const port = process.env.PORT || 3000;
 app.listen(port,() => console.log(`Example app listening at http://localhost:${port}`));
