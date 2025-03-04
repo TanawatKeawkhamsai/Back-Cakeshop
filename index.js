@@ -27,6 +27,10 @@ const Cake = sequelize.define("Cake", {
         type: Sequelize.STRING,
         allowNull: false,
     },
+    img: {
+      type: Sequelize.STRING,
+      allowNull: false,
+  },
   });
 
 const Customer = sequelize.define("Customer", {
@@ -215,7 +219,7 @@ app.get("/Customer/:id", (req, res) => {
       if (!Customer) {
         res.status(404).send("Customer not found");
       } else {
-        res.json(Cake);
+        res.json(Customer);
       }
     })
     .catch((err) => {
@@ -309,24 +313,25 @@ app.post("/Employees", (req, res) => {
 });
 
 app.put("/Employee/:id", (req, res) => {
-    Employee.findByPk(req.params.id)
-      .then((Employee) => {
-        if (!Employee) {
-          res.status(404).send("Employee not found");
-        } else {
-            Employee.update(req.body)
-            .then(() => {
-              res.send(Employee);
-            })
-            .catch((err) => {
-              res.status(500).send(err);
-            });
-        }
-      })
-      .catch((err) => {
-        res.status(500).send(err);
-      });
+  Employee.findByPk(req.params.id)
+    .then((Employee) => {
+      if (!Employee) {
+        res.status(404).send("Employee not found");
+      } else {
+          Employee.update(req.body)
+          .then(() => {
+            res.send(Employee);
+          })
+          .catch((err) => {
+            res.status(500).send(err);
+          });
+      }
+    })
+    .catch((err) => {
+      res.status(500).send(err);
+    });
 });
+
 
 app.delete("/Employee/:id", (req, res) => {
     Employee.findByPk(req.params.id)
@@ -525,28 +530,48 @@ app.post("/register", async (req, res) => {
 //login
 app.post("/login", async (req, res) => {
   try {
-    const { customer_username, customer_password } = req.body;
-    const customer = await Customer.findOne({ where: { customer_username } });
-    if (!customer) return res.json({ message: "User_not_found" });
-    else if (customer.password != customer_password)
-      return res.json({ message: "Wrong_Password" });
-    return res.status(200).json({ message: true, customer: customer });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: "Server_error" });
-  }
+    const { username, password } = req.body;
+
+    // ตรวจสอบในตาราง Customer
+    const customer = await Customer.findOne({ where: { customer_username: username } });
+    if (customer) {
+        if (customer.customer_password !== password) {
+            return res.json({ message: "Wrong_Password" });
+        }
+        return res.status(200).json({ message: true, role: "customer", user: customer });
+    }
+
+    // ตรวจสอบในตาราง Employee
+    const employee = await Employee.findOne({ where: { employee_username: username } });
+    if (employee) {
+        if (employee.employee_password !== password) {
+            return res.json({ message: "Wrong_Password" });
+        }
+        return res.status(200).json({ message: true, role: "employee", user: employee });
+    }
+
+    // ถ้าไม่มีทั้งใน Customer และ Employee
+    return res.json({ message: "User_not_found" });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: "Server_error" });
+    }
 });
 
 //menu_customer
-app.get("/menu_customer", (req, res) => {
-  Cake.findAll() //select * from
-    .then((menu_customer) => {
-      res.json(menu_customer);
-    })
-    .catch((err) => {
-      res.status(500).send(err);
-    });
+app.get("/menu_customer", async (req, res) => {
+  try {
+    const cakes = await Cake.findAll();
+    console.log("🔥 Cakes Data:", cakes); // เช็คว่ามีข้อมูลไหม
+    res.render("menu_customer", { cakes }); // ส่งไปให้ EJS
+  } catch (err) {
+    console.error("❌ Error fetching cakes:", err);
+    res.status(500).send("Internal Server Error");
+  }
 });
+
+
 
 const port = process.env.PORT || 3000;
 app.listen(port,() => console.log(`Example app listening at http://localhost:${port}`));
