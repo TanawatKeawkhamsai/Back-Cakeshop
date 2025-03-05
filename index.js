@@ -27,10 +27,14 @@ const Cake = sequelize.define("Cake", {
         type: Sequelize.STRING,
         allowNull: false,
     },
+    cake_status: {
+      type: Sequelize.STRING,
+      allowNull: false,
+    },
     img: {
       type: Sequelize.STRING,
       allowNull: false,
-  },
+    },
   });
 
 const Customer = sequelize.define("Customer", {
@@ -71,26 +75,14 @@ const Employee = sequelize.define("Employee", {
         type: Sequelize.INTEGER,
         allowNull: false,
     },
-    phone: {
+    position: {
       type: Sequelize.STRING,
       allowNull: false,
-    }
-  });
-
-const Order = sequelize.define("Order", {
-    order_id: {
-      type: Sequelize.INTEGER,
-      autoIncrement: true,
-      primaryKey: true,
     },
-    order_date: {
-      type: Sequelize.DATE,
-      allowNull: false,
-    },
-    Status: {
+    img: {
       type: Sequelize.STRING,
       allowNull: false,
-    }
+    },
   });
 
 const Order_Detail = sequelize.define("Order_Detail", {
@@ -98,10 +90,6 @@ const Order_Detail = sequelize.define("Order_Detail", {
       type: Sequelize.INTEGER,
       autoIncrement: true,
       primaryKey: true,
-    },
-    order_id: {
-      type: Sequelize.INTEGER,
-      allowNull: false,
     },
     cake_id: {
         type: Sequelize.INTEGER,
@@ -115,6 +103,10 @@ const Order_Detail = sequelize.define("Order_Detail", {
         type: Sequelize.INTEGER,
         allowNull: false,
     },
+    store_id: {
+      type: Sequelize.INTEGER,
+      allowNull: false,
+    },
     Quantity: {
       type: Sequelize.INTEGER,
       allowNull: false,
@@ -123,6 +115,22 @@ const Order_Detail = sequelize.define("Order_Detail", {
       type: Sequelize.INTEGER,
       allowNull: false,
     }
+  });
+
+  const Store = sequelize.define("Store", {
+    store_id: {
+      type: Sequelize.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+    store_name: {
+      type: Sequelize.STRING,
+      allowNull: false,
+    },
+    store_address: {
+        type: Sequelize.STRING,
+        allowNull: false,
+    },
   });
 
 sequelize.sync();
@@ -353,24 +361,24 @@ app.delete("/Employee/:id", (req, res) => {
       });
 });
 
-//---------------------------Table_Order---------------------------------
-app.get("/Order", (req, res) => {
-    Order.findAll()
-      .then((Order) => {
-        res.json(Order);
+//---------------------------Table_Store---------------------------------
+app.get("/Store", (req, res) => {
+  Store.findAll()
+      .then((Store) => {
+        res.json(Store);
       })
       .catch((err) => {
         res.status(500).send(err);
       });
 });
 
-app.get("/Order/:id", (req, res) => {
-    Order.findByPk(req.params.id)
-      .then((Order) => {
-        if (!Order) {
-          res.status(404).send("Order not found");
+app.get("/Store/:id", (req, res) => {
+    Store.findByPk(req.params.id)
+      .then((Store) => {
+        if (!Store) {
+          res.status(404).send("Store not found");
         } else {
-          res.json(Order);
+          res.json(Store);
         }
       })
       .catch((err) => {
@@ -378,25 +386,25 @@ app.get("/Order/:id", (req, res) => {
       });
 });
 
-app.post("/Orders", (req, res) => {
-    Order.create(req.body)
-      .then((Order) => {
-        res.send(Order);
+app.post("/Stores", (req, res) => {
+    Store.create(req.body)
+      .then((Store) => {
+        res.send(Store);
       })
       .catch((err) => {
         res.status(500).send(err);
       });
 });
 
-app.put("/Order/:id", (req, res) => {
-    Order.findByPk(req.params.id)
-      .then((Order) => {
-        if (!Order) {
-          res.status(404).send("Order not found");
+app.put("/Store/:id", (req, res) => {
+    Store.findByPk(req.params.id)
+      .then((Store) => {
+        if (!Store) {
+          res.status(404).send("Store not found");
         } else {
-            Order.update(req.body)
+          Store.update(req.body)
             .then(() => {
-              res.send(Order);
+              res.send(Store);
             })
             .catch((err) => {
               res.status(500).send(err);
@@ -408,13 +416,13 @@ app.put("/Order/:id", (req, res) => {
       });
 });
 
-app.delete("/Order/:id", (req, res) => {
-    Order.findByPk(req.params.id)
-      .then((Order) => {
-        if (!Order) {
-          res.status(404).send("Order not found");
+app.delete("/Store/:id", (req, res) => {
+  Store.findByPk(req.params.id)
+      .then((Store) => {
+        if (!Store) {
+          res.status(404).send("Store not found");
         } else {
-            Order.destroy()
+          Store.destroy()
             .then(() => {
               res.send({});
             })
