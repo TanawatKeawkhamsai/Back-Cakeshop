@@ -28,6 +28,10 @@ const Cake = sequelize.define("Cake", {
         type: Sequelize.STRING,
         allowNull: false,
     },
+    cake_quantity: {
+      type: Sequelize.INTEGER,
+      allowNull: false,
+    },
     cake_status: {
       type: Sequelize.STRING,
       allowNull: false,
@@ -610,6 +614,10 @@ app.post("/menu_customer", async (req, res) => {
     };
 
     await Order_Detail.create(orderData);
+    await Cake.update(
+      { cake_quantity: cake.cake_quantity - qty },
+      { where: { cake_id: cake.cake_id } }
+    );
     return res.status(201).json({ message: "Order placed successfully" });
   } catch (err) {
     console.error("Error:", err);
