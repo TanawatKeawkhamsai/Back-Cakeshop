@@ -3,11 +3,11 @@
   "version": "1.0.0",
   "description": "Back",
   "main": "index.js",
- "scripts": {
-  "start": "node index.js",
-  "dev": "nodemon index.js",
-  "format": "prettier --write *.js"
-},
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "format": "prettier --write *.js"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Jiyada22/Back-Cakeshop.git"
