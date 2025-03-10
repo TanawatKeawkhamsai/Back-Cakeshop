@@ -2,6 +2,7 @@ const express = require('express');
 const Sequelize = require('sequelize');
 const app = express();
 app.use(express.json());
+const { Op } = require("sequelize");
 
 const sequelize = new Sequelize("database", "username", "password", {
     host: "localhost",
@@ -35,6 +36,10 @@ const Cake = sequelize.define("Cake", {
       type: Sequelize.STRING,
       allowNull: false,
     },
+    store_id: {
+      type: Sequelize.INTEGER,
+      allowNull: false,
+    }
   });
 
 const Customer = sequelize.define("Customer", {
@@ -97,11 +102,11 @@ const Order_Detail = sequelize.define("Order_Detail", {
     },
     employee_id: {
         type: Sequelize.INTEGER,
-        allowNull: false,
+        allowNull: true,
     },
     customer_id: {
         type: Sequelize.INTEGER,
-        allowNull: false,
+        allowNull: true,
     },
     store_id: {
       type: Sequelize.INTEGER,
@@ -449,7 +454,7 @@ app.get("/Order_Detail", (req, res) => {
 });
 
 app.get("/Order_detail/:id", (req, res) => {
-    Order_detail.findByPk(req.params.id)
+  Order_Detail.findByPk(req.params.id)
       .then((Order_detail) => {
         if (!Order_detail) {
           res.status(404).send("Order_detail not found");
@@ -463,7 +468,7 @@ app.get("/Order_detail/:id", (req, res) => {
 });
 
 app.post("/Order_details", (req, res) => {
-  Order_detail.create(req.body)
+  Order_Detail.create(req.body)
       .then((Order_detail) => {
         res.send(Order_detail);
       })
@@ -473,7 +478,7 @@ app.post("/Order_details", (req, res) => {
 });
 
 app.put("/Order_detail/:id", (req, res) => {
-    Order_detail.findByPk(req.params.id)
+  Order_Detail.findByPk(req.params.id)
       .then((Order_detail) => {
         if (!Order_detail) {
           res.status(404).send("Order_detail not found");
@@ -493,7 +498,7 @@ app.put("/Order_detail/:id", (req, res) => {
 });
 
 app.delete("/Order_detail/:id", (req, res) => {
-    Order_detail.findByPk(req.params.id)
+  Order_Detail.findByPk(req.params.id)
       .then((Order_detail) => {
         if (!Order_detail) {
           res.status(404).send("Order_detail not found");
@@ -525,61 +530,150 @@ app.get("/register", (req, res) => {
 });
 
 app.post("/register", async (req, res) => {
-  console.log(req.body);
-  Customer.create(req.body)
-    .then((Customer) => {
-      res.send(Customer);
-    })
-    .catch((err) => {
-      res.status(500).send(err);
-    });
+  try {
+    console.log(req.body);
+
+    const existingUsername = await Customer.findOne({where: { customer_username: req.body.customer_username },});
+    const existingEmail = await Customer.findOne({where: { email: req.body.email },});
+
+    if (existingUsername) return res.status(400).json({ message: "ชื่อผู้ใช้นี้ถูกใช้ไปแล้ว!" });
+    if (existingEmail)  return res.status(400).json({ message: "อีเมล์นี้ถูกใช้ไปแล้ว!" });
+
+    const newCustomer = await Customer.create(req.body);
+    res.status(201).json(newCustomer);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 //login
 app.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body;
-
-    // ตรวจสอบในตาราง Customer
     const customer = await Customer.findOne({ where: { customer_username: username } });
-    if (customer) {
-        if (customer.customer_password !== password) {
-            return res.json({ message: "Wrong_Password" });
-        }
-        return res.status(200).json({ message: true, role: "customer", user: customer });
-    }
-
-    // ตรวจสอบในตาราง Employee
     const employee = await Employee.findOne({ where: { employee_username: username } });
-    if (employee) {
-        if (employee.employee_password !== password) {
-            return res.json({ message: "Wrong_Password" });
-        }
-        return res.status(200).json({ message: true, role: "employee", user: employee });
+
+    let isPasswordValid = false;
+    let user = null;
+
+    if (customer) {
+      isPasswordValid = customer.customer_password == String(password);
+      let pass = isPasswordValid ? customer.customer_password : null;
+      user = {
+        role: "customer",
+        username: customer.customer_username,
+        password: pass
+      };
+    } else if (employee) {
+      isPasswordValid = employee.employee_password == String(password);
+      let pass = isPasswordValid ? employee.employee_password : null;
+      user = {
+        role: "employee",
+        username: employee.employee_username,
+        password: pass
+      };
     }
 
-    // ถ้าไม่มีทั้งใน Customer และ Employee
-    return res.json({ message: "User_not_found" });
-
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({ error: "Server_error" });
-    }
+    return res.json({ user });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Server error" });
+  }
 });
+
 
 //menu_customer
 app.get("/menu_customer", async (req, res) => {
   try {
     const cakes = await Cake.findAll();
-    console.log("🔥 Cakes Data:", cakes); // เช็คว่ามีข้อมูลไหม
-    res.render("menu_customer", { cakes }); // ส่งไปให้ EJS
+    return res.render("menu_customer", { cakes });
   } catch (err) {
-    console.error("❌ Error fetching cakes:", err);
     res.status(500).send("Internal Server Error");
   }
 });
 
+app.post("/menu_customer", async (req, res) => {
+  try {
+    const { qty, cake_name, cake_price, userSession } = req.body;
+    const cake = await Cake.findOne({ where: { cake_name: cake_name } });
+    const customer = await Customer.findOne({ where: { customer_username: userSession } });
+    const employee = await Employee.findOne({ where: { employee_username: userSession } });
 
+    console.log(customer);
+    let orderData = {
+      cake_id: parseInt(cake.cake_id),
+      employee_id: employee ? parseInt(employee.employee_id) : null,
+      customer_id: customer ? parseInt(customer.customer_id) : null,
+      store_id: parseInt(cake.store_id),
+      Quantity: parseInt(qty),
+      total_price: parseInt(qty) * parseFloat(cake.cake_price)
+    };
+
+    await Order_Detail.create(orderData);
+    return res.status(201).json({ message: "Order placed successfully" });
+  } catch (err) {
+    console.error("Error:", err);
+    return res.status(500).send("Internal Server Error put");
+  }
+});
+
+//add_menu
+app.post("/add_menu", async (req, res) => {
+  try {
+    await Cake.create(req.body);
+    return res.status(201).json({ message: "cake successfully" });
+  } catch (err) {
+    console.error("Error:", err);
+    return res.status(500).send("Internal Server Error put");
+  }
+});
+
+//jointable_orderdetails
+app.get("/jointable_orderdetails", async (req, res) => {
+  try {
+    Order_Detail.belongsTo(Customer, { foreignKey: 'customer_id' });
+    Order_Detail.belongsTo(Employee, { foreignKey: 'employee_id' });
+    Order_Detail.belongsTo(Cake, { foreignKey: 'cake_id' });
+    const orders = await Order_Detail.findAll({
+      include: [{model: Customer, attributes: ['customer_id', 'Address']},
+        {model: Employee, attributes: ['employee_username'], required: false},
+        {model: Cake, attributes: ['cake_name', 'cake_status']}], 
+      where: { employee_id: null }
+    });
+    const reports = await Order_Detail.findAll({
+      include: [{model: Customer, attributes: ['customer_id', 'Address']},
+        {model: Employee, attributes: ['employee_username'], required: false,},
+        {model: Cake, attributes: ['cake_name', 'cake_status']}],
+      where: { employee_id: { [Op.ne]: null } }
+    });
+    return res.json({ orders, reports });
+  } catch (err) {
+    console.error("Error:", err);
+    return res.status(500).send("Internal Server Error jointable_orderdetails");
+  }
+});
+
+//add_employee_INOrder
+app.post("/add_employee_INOrder/:id", async (req, res) => {
+  try {
+    const {test, userSession} = req.body;
+    const employee = await Employee.findOne({ where: { employee_username: userSession } });
+
+    if (employee) {
+      await Order_Detail.update(
+        { employee_id: employee.employee_id },
+        { where: { order_detail_id: req.params.id } }
+      );
+
+      return res.status(201).json({ message: "Order updated successfully" });
+    } else {
+      return res.status(404).json({ error: "Employee not found" });
+    }
+  } catch (err) {
+    console.error("Error:", err);
+    return res.status(500).send("Internal Server Error add_employee_INOrder");
+  }
+});
 
 const port = process.env.PORT || 3000;
 app.listen(port,() => console.log(`Example app listening at http://localhost:${port}`));
